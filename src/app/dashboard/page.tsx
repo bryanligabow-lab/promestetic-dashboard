@@ -1,9 +1,14 @@
 import Link from 'next/link';
+import { unstable_noStore as noStore } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getIntegrations } from '@/lib/settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Megaphone, MessageSquare, Bot, Smartphone } from 'lucide-react';
+import { DashboardLiveStats } from './DashboardLiveStats';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 async function getStats() {
   const [company, chatbot, clients, promos, messages, instance, integ] = await Promise.all([
@@ -19,13 +24,8 @@ async function getStats() {
 }
 
 export default async function DashboardHome() {
-  const { company, chatbot, clients, promos, messages, instance, integ } = await getStats();
-
-  const stats = [
-    { label: 'Clientes', value: clients, icon: Users, href: '/dashboard/clientes' },
-    { label: 'Promociones activas', value: promos, icon: Megaphone, href: '/dashboard/promociones' },
-    { label: 'Mensajes', value: messages, icon: MessageSquare, href: '/dashboard/conversaciones' },
-  ];
+  noStore();
+  const { company, chatbot, instance, integ } = await getStats();
 
   const checklist = [
     { ok: !!company?.name, label: 'Empresa configurada', href: '/dashboard/configuracion' },
@@ -44,23 +44,8 @@ export default async function DashboardHome() {
         <p className="text-muted-foreground">Resumen del estado de tu chatbot</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map(({ label, value, icon: Icon, href }) => (
-          <Link key={label} href={href}>
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6 flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className="text-3xl font-bold mt-1">{value}</p>
-                </div>
-                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-primary" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      {/* Métricas en vivo (polling cada 10s) */}
+      <DashboardLiveStats />
 
       <Card>
         <CardHeader>

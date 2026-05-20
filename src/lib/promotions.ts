@@ -38,6 +38,9 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
   const promo = await prisma.promotion.findUnique({ where: { id: promotionId } });
   if (!promo) throw new Error('Promoción no encontrada');
   if (!promo.active) throw new Error('La promoción está desactivada');
+  if (promo.status === 'running') {
+    throw new Error('Esta promoción ya está enviándose. Espera a que termine.');
+  }
 
   const targetTags = parseJson<string[]>(promo.targetTags, []);
 
@@ -83,6 +86,17 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
   }
 
   result.total = recipients.length;
+
+  // Marcar la promoción como "running" con total esperado
+  await prisma.promotion.update({
+    where: { id: promo.id },
+    data: {
+      status: 'running',
+      totalToSend: recipients.length,
+      startedAt: new Date(),
+      finishedAt: null,
+    },
+  });
 
   const usePauses = shouldUsePausePhases(recipients.length);
   console.log(
@@ -189,10 +203,32 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
 
   await prisma.promotion.update({
     where: { id: promo.id },
-    data: { lastSentAt: new Date(), sendCount: { increment: result.sent } },
+    data: {
+      lastSentAt: new Date(),
+      sendCount: { increment: result.sent },
+      status: 'completed',
+      finishedAt: new Date(),
+    },
   });
 
   return result;
+}
+
+/**
+ * Lanza el envío en background y devuelve inmediatamente.
+ * Cualquier error queda registrado en el campo `status='failed'` de la promo.
+ */
+export function sendPromotionInBackground(promotionId: string) {
+  // No await: corre asíncronamente. Capturamos errores para marcar la promo.
+  sendPromotion(promotionId).catch(async (err) => {
+    console.error(`[promo ${promotionId}] background error:`, err);
+    try {
+      await prisma.promotion.update({
+        where: { id: promotionId },
+        data: { status: 'failed', finishedAt: new Date() },
+      });
+    } catch {}
+  });
 }
 
 function sleep(ms: number) {

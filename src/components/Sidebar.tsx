@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Building2, Bot, Image as ImageIcon,
-  Megaphone, Users, MessageSquare, Smartphone, Plug, LogOut,
+  Megaphone, Users, MessageSquare, Smartphone, Plug, LogOut, Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './BrandLogo';
@@ -16,6 +16,7 @@ const nav = [
   { href: '/dashboard/chatbot', label: 'Chatbot', icon: Bot },
   { href: '/dashboard/catalogo', label: 'Catálogo', icon: ImageIcon },
   { href: '/dashboard/promociones', label: 'Promociones', icon: Megaphone },
+  { href: '/dashboard/envios', label: 'Envíos', icon: Send },
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
   { href: '/dashboard/conversaciones', label: 'Conversaciones', icon: MessageSquare },
   { href: '/dashboard/whatsapp', label: 'WhatsApp', icon: Smartphone },
@@ -67,7 +68,7 @@ export function Sidebar() {
           <LogOut className="w-4 h-4" />
           Cerrar sesión
         </button>
-        <p className="text-xs text-muted-foreground px-3">v0.1.2</p>
+        <p className="text-xs text-muted-foreground px-3">v0.1.3</p>
       </div>
     </aside>
   );

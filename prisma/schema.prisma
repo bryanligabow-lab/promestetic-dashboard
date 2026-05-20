@@ -95,10 +95,17 @@ model Promotion {
   // Si vacío, envía a todos los clientes activos
   lastSentAt  DateTime?
   sendCount   Int       @default(0)
+  // Estado del run actual: idle | running | completed | failed
+  status      String    @default("idle")
+  totalToSend Int       @default(0)
+  startedAt   DateTime?
+  finishedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   sends       PromotionSend[]
+
+  @@index([status])
 }
 
 model PromotionSend {
@@ -114,6 +121,7 @@ model PromotionSend {
 
   @@index([promotionId])
   @@index([clientId])
+  @@index([sentAt])
 }
 
 // =========================

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendPromotion } from '@/lib/promotions';
+import { sendPromotionInBackground } from '@/lib/promotions';
 
 /**
  * Dispara el envío de una promoción.
@@ -13,14 +13,11 @@ import { sendPromotion } from '@/lib/promotions';
  */
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    // Lanza el envío sin esperar (background)
-    void sendPromotion(params.id).catch((e) => {
-      console.error(`[send promo ${params.id}] error:`, e);
-    });
+    sendPromotionInBackground(params.id);
 
     return NextResponse.json({
       ok: true,
-      message: 'Envío iniciado en segundo plano. Refresca para ver el progreso.',
+      message: 'Envío iniciado. Mira el progreso en la sección "Envíos".',
       promotionId: params.id,
     });
   } catch (e) {
