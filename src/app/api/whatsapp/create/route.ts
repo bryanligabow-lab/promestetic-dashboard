@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { sheetsDb as prisma } from '@/lib/sheets-db';
 import { evolution, isEvolutionConfigured } from '@/lib/evolution';
 import { getIntegrations } from '@/lib/settings';
 

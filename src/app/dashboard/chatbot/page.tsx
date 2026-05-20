@@ -1,4 +1,6 @@
-import { prisma } from '@/lib/prisma';
+export const dynamic = 'force-dynamic';
+
+import { sheetsDb as prisma } from '@/lib/sheets-db';
 import { ChatbotForm } from './ChatbotForm';
 
 export default async function ChatbotPage() {

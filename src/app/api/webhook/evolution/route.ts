@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { sheetsDb as prisma } from '@/lib/sheets-db';
 import { generateReply, isClaudeConfigured } from '@/lib/claude';
 import { evolution } from '@/lib/evolution';
 import { isWithinBusinessHours } from '@/lib/hours';
@@ -93,9 +93,8 @@ async function handleMessage(payload: any) {
   // Upsert conversación
   const conv = await prisma.conversation.upsert({
     where: { clientId: client.id },
-    update: { lastMsgAt: new Date() },
-    create: { clientId: client.id, lastMsgAt: new Date() },
-    include: { messages: { orderBy: { createdAt: 'asc' }, take: 20 } },
+    update: { lastMsgAt: new Date().toISOString() },
+    create: { clientId: client.id, lastMsgAt: new Date().toISOString(), paused: false, needsHumanHelp: false },
   });
 
   // Guardar mensaje entrante

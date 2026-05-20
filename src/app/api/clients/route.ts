@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { sheetsDb } from '@/lib/sheets-db';
 import { normalizePhone } from '@/lib/utils';
 
 export async function GET() {
-  const clients = await prisma.client.findMany({ orderBy: { createdAt: 'desc' } });
+  const clients = await sheetsDb.client.findMany();
+  // Ordenar desc por createdAt (Sheets no soporta orderBy nativo)
+  clients.sort((a: any, b: any) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return NextResponse.json(clients);
 }
 
@@ -12,7 +14,7 @@ export async function POST(req: NextRequest) {
   const phone = normalizePhone(body.phone);
   if (!phone) return NextResponse.json({ error: 'Teléfono inválido' }, { status: 400 });
 
-  const client = await prisma.client.create({
+  const client = await sheetsDb.client.create({
     data: {
       phone,
       name: body.name || null,
@@ -20,6 +22,8 @@ export async function POST(req: NextRequest) {
       tags: body.tags || '[]',
       notes: body.notes || null,
       optedOut: Boolean(body.optedOut),
+      bounceCount: 0,
+      isSpam: false,
     },
   });
   return NextResponse.json(client);

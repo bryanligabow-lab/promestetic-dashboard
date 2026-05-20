@@ -1,4 +1,6 @@
-import { prisma } from '@/lib/prisma';
+export const dynamic = 'force-dynamic';
+
+import { sheetsDb as prisma } from '@/lib/sheets-db';
 import { CatalogClient } from './CatalogClient';
 
 export default async function CatalogoPage() {

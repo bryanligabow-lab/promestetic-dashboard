@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { sheetsDb } from '@/lib/sheets-db';
 import { getIntegrations, maskKey } from '@/lib/settings';
 
 export async function GET() {
   const integ = await getIntegrations();
-  // No devolvemos las API keys completas, solo enmascaradas
   return NextResponse.json({
     anthropicApiKeyMasked: maskKey(integ.anthropicApiKey),
     anthropicConfigured: Boolean(integ.anthropicApiKey),
@@ -24,7 +23,6 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  // Solo escribimos los campos provistos (string vacío = limpiar; undefined = no tocar)
   const data: Record<string, string | null> = {};
   for (const key of [
     'anthropicApiKey',
@@ -40,10 +38,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await prisma.integrationSettings.upsert({
-    where: { id: 'singleton' },
+  await sheetsDb.integrationSettings.upsert({
+    where: {},
+    create: data,
     update: data,
-    create: { id: 'singleton', ...data },
   });
 
   return NextResponse.json({ ok: true });

@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { sheetsDb } from './sheets-db';
 
 export interface IntegrationsResolved {
   anthropicApiKey: string;
@@ -12,29 +12,32 @@ export interface IntegrationsResolved {
 }
 
 /**
- * Carga la configuración de integraciones desde DB y, si falta algún campo,
+ * Carga la configuración de integraciones desde Sheets y, si falta algún campo,
  * usa el valor del .env como fallback.
  */
 export async function getIntegrations(): Promise<IntegrationsResolved> {
-  const row = await prisma.integrationSettings.findUnique({
-    where: { id: 'singleton' },
-  });
+  let row: any = null;
+  try {
+    row = await sheetsDb.integrationSettings.findFirst();
+  } catch {
+    // si Sheets no responde, caemos a env
+  }
 
-  const dbAnthropic = row?.anthropicApiKey?.trim() ?? '';
-  const dbEvoKey = row?.evolutionApiKey?.trim() ?? '';
+  const dbAnthropic = String(row?.anthropicApiKey || '').trim();
+  const dbEvoKey = String(row?.evolutionApiKey || '').trim();
 
   return {
     anthropicApiKey: dbAnthropic || process.env.ANTHROPIC_API_KEY || '',
-    claudeModel: row?.claudeModel?.trim() || process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+    claudeModel: (row?.claudeModel || '').trim() || process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
     evolutionApiUrl:
-      row?.evolutionApiUrl?.trim() || process.env.EVOLUTION_API_URL || '',
+      (row?.evolutionApiUrl || '').trim() || process.env.EVOLUTION_API_URL || '',
     evolutionApiKey: dbEvoKey || process.env.EVOLUTION_API_KEY || '',
     evolutionInstance:
-      row?.evolutionInstance?.trim() ||
+      (row?.evolutionInstance || '').trim() ||
       process.env.EVOLUTION_INSTANCE_NAME ||
       'promestetic',
     publicBaseUrl:
-      row?.publicBaseUrl?.trim() ||
+      (row?.publicBaseUrl || '').trim() ||
       process.env.PUBLIC_BASE_URL ||
       'http://localhost:3000',
     sourceAnthropic: dbAnthropic ? 'db' : process.env.ANTHROPIC_API_KEY ? 'env' : 'none',
