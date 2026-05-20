@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!checkCredentials(username, password)) {
     return NextResponse.json({ error: 'Usuario o contraseña incorrectos' }, { status: 401 });
   }
-  const token = makeSessionToken(username);
+  const token = await makeSessionToken(username);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,

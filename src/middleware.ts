@@ -8,7 +8,7 @@ import { verifySessionToken, AUTH_COOKIE } from '@/lib/auth';
  * - /api/webhook/* (Evolution debe llamar sin auth)
  * - assets estáticos (/_next, /favicon, /uploads)
  */
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Públicos
@@ -24,7 +24,7 @@ export function middleware(req: NextRequest) {
   }
 
   const token = req.cookies.get(AUTH_COOKIE)?.value;
-  const session = verifySessionToken(token);
+  const session = await verifySessionToken(token);
 
   if (!session) {
     // Para API → 401 JSON
