@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { verifySessionToken, AUTH_COOKIE } from '@/lib/auth';
+
+/**
+ * Protege todas las rutas del dashboard. Permite acceso libre a:
+ * - /login
+ * - /api/auth/* (login/logout)
+ * - /api/webhook/* (Evolution debe llamar sin auth)
+ * - assets estáticos (/_next, /favicon, /uploads)
+ */
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Públicos
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/uploads') ||
+    pathname === '/login' ||
+    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/webhook/')
+  ) {
+    return NextResponse.next();
+  }
+
+  const token = req.cookies.get(AUTH_COOKIE)?.value;
+  const session = verifySessionToken(token);
+
+  if (!session) {
+    // Para API → 401 JSON
+    if (pathname.startsWith('/api/')) {
+      return new NextResponse(JSON.stringify({ error: 'no autenticado' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    // Para páginas → redirige a /login
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};

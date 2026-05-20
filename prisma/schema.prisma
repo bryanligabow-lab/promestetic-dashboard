@@ -1,0 +1,210 @@
+// Prisma schema - PROMESTETIC dashboard
+// Para producción cambia "sqlite" por "postgresql" sin tocar el resto.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+//  EMPRESA Y CONFIG GLOBAL
+// =========================
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?
+  phone       String?
+  email       String?
+  address     String?
+  website     String?
+  description String?
+  // Horarios en JSON: { mon: { open: "09:00", close: "18:00" }, ... }
+  hours       String   @default("{}")
+  timezone    String   @default("America/Bogota")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ChatbotConfig {
+  id              String   @id @default(cuid())
+  companyId       String
+  // Prompt principal del sistema (rol/identidad/reglas duras)
+  systemPrompt    String
+  // Plantilla para mensajes del usuario (puede incluir {message}, {client_name}, etc.)
+  userPromptTpl   String   @default("{message}")
+  model           String   @default("claude-sonnet-4-6")
+  temperature     Float    @default(0.5)
+  maxTokens       Int      @default(1024)
+  // Reglas duras como JSON array de strings
+  rules           String   @default("[]")
+  // Saludo inicial cuando llega un cliente nuevo
+  welcomeMessage  String?
+  // Mensaje fuera de horario
+  offHoursMessage String?
+  // Si es true, responde solo dentro de horarios
+  respectHours    Boolean  @default(true)
+  // Auto-respuesta on/off
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}
+
+// =========================
+//  CATALOGO / INFO DE LA EMPRESA
+// =========================
+
+model CatalogItem {
+  id          String   @id @default(cuid())
+  type        String   // "producto" | "servicio" | "info"
+  name        String
+  description String
+  price       Float?
+  imageUrl    String?
+  tags        String   @default("[]") // JSON array
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([active])
+}
+
+// =========================
+//  PROMOCIONES
+// =========================
+
+model Promotion {
+  id          String    @id @default(cuid())
+  title       String
+  message     String    // Texto que se envia por WhatsApp
+  imageUrl    String?   // Imagen opcional
+  active      Boolean   @default(true)
+  // Programación opcional
+  scheduledAt DateTime?
+  // Cron expression opcional para repetir (ej: "0 10 * * 1" lunes 10am)
+  cronExpr    String?
+  // Auto-enviar al crearla
+  autoSendOnCreate Boolean @default(false)
+  // Segmentación: tags de clientes (JSON array)
+  targetTags  String    @default("[]")
+  // Si vacío, envía a todos los clientes activos
+  lastSentAt  DateTime?
+  sendCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sends       PromotionSend[]
+}
+
+model PromotionSend {
+  id          String   @id @default(cuid())
+  promotionId String
+  clientId    String
+  status      String   // "pending" | "sent" | "failed"
+  error       String?
+  sentAt      DateTime @default(now())
+
+  promotion   Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([promotionId])
+  @@index([clientId])
+}
+
+// =========================
+//  CLIENTES (CRM)
+// =========================
+
+model Client {
+  id          String   @id @default(cuid())
+  phone       String   @unique   // formato E.164 sin +, ej: "573001234567"
+  name        String?
+  email       String?
+  tags        String   @default("[]") // JSON array
+  notes       String?
+  // Opt-out de promociones
+  optedOut    Boolean  @default(false)
+  lastSeenAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  conversation Conversation?
+  sends        PromotionSend[]
+}
+
+// =========================
+//  CONVERSACIONES Y MENSAJES
+// =========================
+
+model Conversation {
+  id              String    @id @default(cuid())
+  clientId        String    @unique
+  // Si está pausada, el bot no responde y debe atender un humano
+  paused          Boolean   @default(false)
+  // El cliente necesita atención de un asesor humano
+  needsHumanHelp  Boolean   @default(false)
+  helpRequestedAt DateTime?
+  // Razón por la que se marcó (keyword, llm, manual)
+  helpReason      String?
+  lastMsgAt       DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+
+  client    Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@index([needsHumanHelp])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  // "in" = cliente -> bot, "out" = bot/humano -> cliente
+  direction      String
+  // "client" | "bot" | "agent" | "system" | "promo"
+  sender         String
+  content        String
+  mediaUrl       String?
+  mediaType      String?
+  // ID del mensaje en Evolution API
+  externalId     String?
+  createdAt      DateTime @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// =========================
+//  EVOLUTION API / WHATSAPP
+// =========================
+
+model WhatsAppInstance {
+  id           String   @id @default(cuid())
+  instanceName String   @unique
+  status       String   @default("disconnected") // connected | disconnected | qr_pending
+  phoneNumber  String?
+  qrCodeData   String?  // base64 del QR cuando está pendiente
+  lastSyncAt   DateTime?
+  updatedAt    DateTime @updatedAt
+}
+
+// =========================
+//  INTEGRACIONES (API keys, etc.) - singleton
+// =========================
+
+model IntegrationSettings {
+  id                  String   @id @default("singleton")
+  anthropicApiKey     String?
+  claudeModel         String   @default("claude-sonnet-4-6")
+  evolutionApiUrl     String?
+  evolutionApiKey     String?
+  evolutionInstance   String?
+  publicBaseUrl       String?
+  updatedAt           DateTime @updatedAt
+}
