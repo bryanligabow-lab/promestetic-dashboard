@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { sheetsDb } from './sheets-db';
+import { prisma } from './prisma';
 import { evolution } from './evolution';
 import { parseJson } from './utils';
 import {
@@ -35,14 +35,14 @@ interface SendResult {
  * Para 7000 contactos: lotes de 100, 3 min entre lotes, 2s entre mensajes.
  */
 export async function sendPromotion(promotionId: string): Promise<SendResult> {
-  const promo = await sheetsDb.promotion.findUnique({ where: { id: promotionId } });
+  const promo = await prisma.promotion.findUnique({ where: { id: promotionId } });
   if (!promo) throw new Error('Promoción no encontrada');
   if (!promo.active) throw new Error('La promoción está desactivada');
 
   const targetTags = parseJson<string[]>(promo.targetTags, []);
 
   // Sacamos todos los candidatos (sin filtrar todavía en SQL para poder loggear razones)
-  const candidates = await sheetsDb.client.findMany();
+  const candidates = await prisma.client.findMany();
 
   const result: SendResult = {
     promotionId,
@@ -126,39 +126,31 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
           await evolution.sendText(client.phone, promo.message);
         }
 
-        await sheetsDb.promotionSend.create({
-          data: { promotionId: promo.id, clientId: client.id, status: 'sent' },
-        });
-        if (client.bounceCount > 0) {
-          await sheetsDb.client.update({
-            where: { id: client.id },
-            data: { bounceCount: 0, lastBounceAt: null },
+        await prisma.$transaction(async (tx) => {
+          await tx.promotionSend.create({
+            data: { promotionId: promo.id, clientId: client.id, status: 'sent' },
           });
-        }
-        // upsert conversación por clientId (Sheets no soporta unique constraint nativo)
-        const existing = await sheetsDb.conversation.findFirst({ clientId: client.id });
-        const conv = existing
-          ? await sheetsDb.conversation.update({
-              where: { id: existing.id },
-              data: { lastMsgAt: new Date().toISOString() },
-            })
-          : await sheetsDb.conversation.create({
-              data: {
-                clientId: client.id,
-                lastMsgAt: new Date().toISOString(),
-                paused: false,
-                needsHumanHelp: false,
-              },
+          if (client.bounceCount > 0) {
+            await tx.client.update({
+              where: { id: client.id },
+              data: { bounceCount: 0, lastBounceAt: null },
             });
-        await sheetsDb.message.create({
-          data: {
-            conversationId: conv.id,
-            direction: 'out',
-            sender: 'promo',
-            content: promo.message,
-            mediaUrl: promo.imageUrl ?? null,
-            mediaType: promo.imageUrl ? 'image' : null,
-          },
+          }
+          const conv = await tx.conversation.upsert({
+            where: { clientId: client.id },
+            update: { lastMsgAt: new Date() },
+            create: { clientId: client.id, lastMsgAt: new Date() },
+          });
+          await tx.message.create({
+            data: {
+              conversationId: conv.id,
+              direction: 'out',
+              sender: 'promo',
+              content: promo.message,
+              mediaUrl: promo.imageUrl,
+              mediaType: promo.imageUrl ? 'image' : null,
+            },
+          });
         });
 
         result.sent++;
@@ -167,18 +159,17 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
         result.failed++;
         result.errors.push({ phone: client.phone, error: msg });
 
-        const newBounce = (client.bounceCount ?? 0) + 1;
-        await sheetsDb.client.update({
+        await prisma.client.update({
           where: { id: client.id },
           data: {
-            bounceCount: newBounce,
-            lastBounceAt: new Date().toISOString(),
-            ...(newBounce >= 3
-              ? { optedOut: true, optedOutReason: 'bounced', optedOutAt: new Date().toISOString() }
+            bounceCount: { increment: 1 },
+            lastBounceAt: new Date(),
+            ...(client.bounceCount + 1 >= 3
+              ? { optedOut: true, optedOutReason: 'bounced', optedOutAt: new Date() }
               : {}),
           },
         });
-        await sheetsDb.promotionSend.create({
+        await prisma.promotionSend.create({
           data: {
             promotionId: promo.id,
             clientId: client.id,
@@ -196,12 +187,9 @@ export async function sendPromotion(promotionId: string): Promise<SendResult> {
     }
   }
 
-  await sheetsDb.promotion.update({
+  await prisma.promotion.update({
     where: { id: promo.id },
-    data: {
-      lastSentAt: new Date().toISOString(),
-      sendCount: (promo.sendCount ?? 0) + result.sent,
-    },
+    data: { lastSentAt: new Date(), sendCount: { increment: result.sent } },
   });
 
   return result;

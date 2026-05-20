@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetsDb } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
-  const c = await sheetsDb.company.findFirst();
+  const c = await prisma.company.findFirst();
   return NextResponse.json(c);
 }
 
@@ -21,11 +21,9 @@ export async function POST(req: NextRequest) {
     timezone: body.timezone || 'America/Bogota',
   };
 
-  // upsert singleton (Apps Script tiene la action 'upsert' nativa)
-  const company = await sheetsDb.company.upsert({
-    where: {},
-    create: data,
-    update: data,
-  });
+  const existing = await prisma.company.findFirst();
+  const company = existing
+    ? await prisma.company.update({ where: { id: existing.id }, data })
+    : await prisma.company.create({ data });
   return NextResponse.json(company);
 }

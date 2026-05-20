@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetsDb } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 
 /** Devuelve una conversación con todos sus mensajes. */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const conv = await sheetsDb.conversation.findUnique({ where: { id: params.id } });
+  const conv = await prisma.conversation.findUnique({
+    where: { id: params.id },
+    include: {
+      client: true,
+      messages: { orderBy: { createdAt: 'asc' } },
+    },
+  });
   if (!conv) return NextResponse.json({ error: 'no encontrada' }, { status: 404 });
-
-  const [client, allMessages] = await Promise.all([
-    conv.clientId
-      ? sheetsDb.client.findUnique({ where: { id: conv.clientId } })
-      : Promise.resolve(null),
-    sheetsDb.message.findMany({ conversationId: conv.id }),
-  ]);
-  allMessages.sort((a: any, b: any) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-
-  return NextResponse.json({ ...conv, client, messages: allMessages });
+  return NextResponse.json(conv);
 }
 
 /** PATCH para pausar bot, marcar/resolver ayuda. */
@@ -26,11 +23,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   if (typeof body.needsHumanHelp === 'boolean') {
     data.needsHumanHelp = body.needsHumanHelp;
-    data.helpRequestedAt = body.needsHumanHelp ? new Date().toISOString() : null;
+    data.helpRequestedAt = body.needsHumanHelp ? new Date() : null;
     data.helpReason = body.needsHumanHelp ? (body.helpReason ?? 'manual') : null;
   }
 
-  const conv = await sheetsDb.conversation.update({
+  const conv = await prisma.conversation.update({
     where: { id: params.id },
     data,
   });

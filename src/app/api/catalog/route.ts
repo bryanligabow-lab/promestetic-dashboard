@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetsDb as prisma } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   const items = await prisma.catalogItem.findMany({ orderBy: { createdAt: 'desc' } });

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sheetsDb } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 import { normalizePhone } from '@/lib/utils';
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
-  const client = await sheetsDb.client.update({
+  const client = await prisma.client.update({
     where: { id: params.id },
     data: {
       phone: normalizePhone(body.phone),
@@ -19,6 +19,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  await sheetsDb.client.delete({ where: { id: params.id } });
+  await prisma.client.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

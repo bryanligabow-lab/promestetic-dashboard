@@ -1,6 +1,4 @@
-export const dynamic = 'force-dynamic';
-
-import { sheetsDb as prisma } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 import { ClientsClient } from './ClientsClient';
 
 export default async function ClientesPage() {

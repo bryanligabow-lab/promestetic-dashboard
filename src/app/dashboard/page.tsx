@@ -1,7 +1,5 @@
-export const dynamic = 'force-dynamic';
-
 import Link from 'next/link';
-import { sheetsDb as prisma } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 import { getIntegrations } from '@/lib/settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

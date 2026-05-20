@@ -1,6 +1,4 @@
-export const dynamic = 'force-dynamic';
-
-import { sheetsDb as prisma } from '@/lib/sheets-db';
+import { prisma } from '@/lib/prisma';
 import { CompanyForm } from './CompanyForm';
 
 export default async function ConfiguracionPage() {

@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import { getIntegrations, maskKey } from '@/lib/settings';
 import { IntegrationsForm } from './IntegrationsForm';
 
