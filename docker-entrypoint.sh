@@ -1,10 +1,17 @@
 #!/bin/sh
 set -e
 
-# Aplica el schema de Prisma sobre la DB (crea tablas si no existen).
-# Usa db push para SQLite (no necesitamos migraciones formales en este proyecto).
+# La DB vive en el volumen montado /app/data (vacío al primer deploy).
+# El schema vive en /app/prisma/schema.prisma (de la imagen).
+echo "[entrypoint] DATABASE_URL=$DATABASE_URL"
+echo "[entrypoint] working dir: $(pwd)"
+echo "[entrypoint] schema: $(ls -la /app/prisma/schema.prisma 2>&1)"
+echo "[entrypoint] /app/data: $(ls -la /app/data 2>&1)"
+
+# Aplica el schema con db push. NO suprimimos errores para verlos.
 echo "[entrypoint] aplicando schema Prisma..."
-npx prisma db push --skip-generate --accept-data-loss=false || true
+cd /app
+npx prisma db push --schema=/app/prisma/schema.prisma --skip-generate --accept-data-loss
 
 echo "[entrypoint] arrancando Next.js..."
 exec node server.js
