@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { CompanyForm } from './CompanyForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ConfiguracionPage() {
   const company = await prisma.company.findFirst();
   return (

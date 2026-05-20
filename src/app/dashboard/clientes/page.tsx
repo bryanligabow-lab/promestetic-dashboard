@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { ClientsClient } from './ClientsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ClientesPage() {
   const clients = await prisma.client.findMany({ orderBy: { createdAt: 'desc' } });
   return (

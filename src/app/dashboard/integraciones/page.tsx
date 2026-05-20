@@ -1,6 +1,8 @@
 import { getIntegrations, maskKey } from '@/lib/settings';
 import { IntegrationsForm } from './IntegrationsForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function IntegracionesPage() {
   const integ = await getIntegrations();
   return (

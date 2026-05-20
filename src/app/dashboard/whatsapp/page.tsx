@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getIntegrations } from '@/lib/settings';
 import { WhatsAppClient } from './WhatsAppClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function WhatsAppPage() {
   const [instance, integ] = await Promise.all([
     prisma.whatsAppInstance.findFirst(),

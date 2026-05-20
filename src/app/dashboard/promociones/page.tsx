@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { PromotionsClient } from './PromotionsClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PromocionesPage() {
   const promos = await prisma.promotion.findMany({ orderBy: { createdAt: 'desc' } });
   return (
