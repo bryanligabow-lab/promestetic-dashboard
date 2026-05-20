@@ -17,8 +17,15 @@ RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# DATABASE_URL placeholder solo para el build.
+# En runtime se sobreescribe con la env var real del contenedor.
+ENV DATABASE_URL="file:./prisma/build.db"
+# Evita que Next intente conectarse a la DB durante el pre-render
+ENV NEXT_TELEMETRY_DISABLED=1
+
 # Genera cliente Prisma y compila Next
 RUN npx prisma generate
+RUN npx prisma db push --skip-generate --accept-data-loss
 RUN npm run build
 
 # ----------- 3) Runtime -----------
