@@ -121,20 +121,32 @@ model PromotionSend {
 // =========================
 
 model Client {
-  id          String   @id @default(cuid())
-  phone       String   @unique   // formato E.164 sin +, ej: "573001234567"
-  name        String?
-  email       String?
-  tags        String   @default("[]") // JSON array
-  notes       String?
+  id              String    @id @default(cuid())
+  phone           String    @unique // formato E.164 sin +, ej: "573001234567"
+  name            String?
+  email           String?
+  tags            String    @default("[]") // JSON array
+  notes           String?
   // Opt-out de promociones
-  optedOut    Boolean  @default(false)
-  lastSeenAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  optedOut        Boolean   @default(false)
+  optedOutReason  String? // "stop_keyword" | "manual" | "bounced"
+  optedOutAt      DateTime?
+  // Antispam: tracking de bounces (envíos que fallaron)
+  bounceCount     Int       @default(0)
+  lastBounceAt    DateTime?
+  // Marcado como spam (mensajes spam recibidos)
+  isSpam          Boolean   @default(false)
+  spamReason      String?
+  lastSeenAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   conversation Conversation?
   sends        PromotionSend[]
+
+  @@index([optedOut])
+  @@index([isSpam])
+  @@index([bounceCount])
 }
 
 // =========================

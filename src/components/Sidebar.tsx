@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Building2, Bot, Image as ImageIcon,
-  Megaphone, Users, MessageSquare, Smartphone, Sparkles, Plug, LogOut,
+  Megaphone, Users, MessageSquare, Smartphone, Plug, LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BrandLogo } from './BrandLogo';
 
 const nav = [
   { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
@@ -34,15 +35,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 border-r bg-card flex flex-col">
       <div className="p-6 border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <div>
-            <p className="font-semibold text-base leading-tight">Promestetic</p>
-            <p className="text-xs text-muted-foreground">Dashboard</p>
-          </div>
-        </div>
+        <BrandLogo size={40} showName />
       </div>
 
       <nav className="flex-1 p-3 space-y-1">

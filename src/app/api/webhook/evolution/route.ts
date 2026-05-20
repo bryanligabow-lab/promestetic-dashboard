@@ -4,6 +4,7 @@ import { generateReply, isClaudeConfigured } from '@/lib/claude';
 import { evolution } from '@/lib/evolution';
 import { isWithinBusinessHours } from '@/lib/hours';
 import { detectsEscalation } from '@/lib/escalation';
+import { detectOptOut, detectSpamMessage } from '@/lib/antispam';
 
 /**
  * Webhook de Evolution API.
@@ -107,6 +108,35 @@ async function handleMessage(payload: any) {
       externalId,
     },
   });
+
+  // ANTISPAM: detectar opt-out automático ("BAJA", "STOP", etc.)
+  const optOut = detectOptOut(text);
+  if (optOut.optedOut && !client.optedOut) {
+    await prisma.client.update({
+      where: { id: client.id },
+      data: {
+        optedOut: true,
+        optedOutReason: optOut.reason ?? 'stop_keyword',
+        optedOutAt: new Date(),
+      },
+    });
+    console.log(`[antispam] ${client.phone} dado de baja: ${optOut.reason}`);
+    return; // ya no procesamos más este mensaje
+  }
+
+  // ANTISPAM: detectar si el mensaje es spam entrante
+  const spam = detectSpamMessage(text);
+  if (spam.isSpam && !client.isSpam) {
+    await prisma.client.update({
+      where: { id: client.id },
+      data: { isSpam: true, spamReason: spam.reason ?? 'spam_detected' },
+    });
+    console.log(`[antispam] ${client.phone} marcado como spam: ${spam.reason}`);
+    return; // no respondemos a spammers
+  }
+
+  // Si el cliente ya está marcado como spam, ignoramos el mensaje
+  if (client.isSpam) return;
 
   // Detectar si pide ayuda de un asesor
   const esc = detectsEscalation(text);

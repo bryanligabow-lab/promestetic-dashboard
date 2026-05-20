@@ -74,13 +74,23 @@ export function PromotionsClient({ initial }: { initial: Promo[] }) {
   }
 
   async function sendNow(id: string) {
-    if (!confirm('¿Enviar esta promoción a todos los clientes objetivo ahora?')) return;
+    if (
+      !confirm(
+        '¿Iniciar el envío de esta promoción?\n\n' +
+          'El envío usa un patrón aleatorio antispam (ráfagas + pausas) para evitar baneos. ' +
+          'En listas grandes puede tardar horas. Puedes cerrar el dashboard, el envío continúa en el servidor.'
+      )
+    )
+      return;
     setSending(id);
     try {
       const res = await fetch(`/api/promotions/${id}/send`, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error');
-      toast.success(`Enviada: ${data.sent}/${data.total} (${data.failed} fallos)`);
+      toast.success(
+        data.message ?? 'Envío iniciado. Se actualizará el contador conforme avance.'
+      );
+      // Refrescar listado cada 10s mientras se está enviando
       const fresh = await fetch('/api/promotions').then((r) => r.json());
       setPromos(fresh);
     } catch (e) {
