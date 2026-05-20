@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { CompanyForm } from './CompanyForm';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ConfiguracionPage() {
   const company = await prisma.company.findFirst();

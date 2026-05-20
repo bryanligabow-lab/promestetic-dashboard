@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma';
 import { ChatbotForm } from './ChatbotForm';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function ChatbotPage() {
   const cfg = await prisma.chatbotConfig.findFirst();

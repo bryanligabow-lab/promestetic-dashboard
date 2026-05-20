@@ -1,10 +1,15 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { ClientsClient } from './ClientsClient';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export default async function ClientesPage() {
+  noStore();
   const clients = await prisma.client.findMany({ orderBy: { createdAt: 'desc' } });
+  console.log('[clientes/page] cargados:', clients.length);
   return (
     <div className="space-y-6">
       <div>

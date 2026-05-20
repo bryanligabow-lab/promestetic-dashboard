@@ -3,6 +3,7 @@ import { getIntegrations } from '@/lib/settings';
 import { WhatsAppClient } from './WhatsAppClient';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function WhatsAppPage() {
   const [instance, integ] = await Promise.all([

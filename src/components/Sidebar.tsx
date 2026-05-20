@@ -67,7 +67,7 @@ export function Sidebar() {
           <LogOut className="w-4 h-4" />
           Cerrar sesión
         </button>
-        <p className="text-xs text-muted-foreground px-3">v0.1.0</p>
+        <p className="text-xs text-muted-foreground px-3">v0.1.2</p>
       </div>
     </aside>
   );
