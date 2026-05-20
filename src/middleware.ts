@@ -11,14 +11,23 @@ import { verifySessionToken, AUTH_COOKIE } from '@/lib/auth';
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Reescribir /uploads/X.png → /api/file/X.png
+  // Necesario porque Next.js standalone no sirve archivos del volumen en runtime.
+  if (pathname.startsWith('/uploads/')) {
+    const filename = pathname.replace('/uploads/', '');
+    const url = req.nextUrl.clone();
+    url.pathname = `/api/file/${filename}`;
+    return NextResponse.rewrite(url);
+  }
+
   // Públicos
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.startsWith('/uploads') ||
     pathname === '/login' ||
     pathname.startsWith('/api/auth/') ||
-    pathname.startsWith('/api/webhook/')
+    pathname.startsWith('/api/webhook/') ||
+    pathname.startsWith('/api/file/')
   ) {
     return NextResponse.next();
   }
